@@ -1,0 +1,63 @@
+version: '3'
+services:
+
+  mysql-tyamahori:
+    image: mysql:5.7
+    container_name: mysql-tyamahori
+    volumes:
+      - ./db:/var/lib/mysql
+    environment:
+      MYSQL_USER:                 root
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+      MYSQL_DATABASE: laravel_tyamahori
+    ports: 
+      - 3306:3306
+
+  php-fpm-tyamahori:
+    build: ./dockerfiles/php-fpm 
+    volumes:
+      - ./:/opt/tyamahori/html
+    container_name: php-fpm-tyamahori
+    working_dir: '/opt/tyamahori/html'
+    depends_on:
+      - mysql-tyamahori
+
+  nginx-tyamahori:
+    image: nginx:1.13
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./:/opt/tyamahori/html
+      - ./dockerfiles/nginx/nginx.conf:/etc/nginx.conf
+      - ./dockerfiles/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./dockerfiles/nginx/keys/localhost.key:/etc/ssl/private/localhost.key
+      - ./dockerfiles/nginx/keys/localhost.crt:/etc/ssl/certs/localhost.crt
+    container_name: nginx-tyamahori
+    working_dir: /opt/tyamahori/html
+    depends_on: 
+      - php-fpm-tyamahori
+
+  smtp-tyamahori:
+    image: namshi/smtp
+    container_name: shimauma-smtp
+
+  composer-tyamahori:
+    image: composer
+    container_name: composer-tyamahori
+    volumes:
+      - ./:/app
+    working_dir: /app
+
+  memcached-tyamahori:
+    image: memcached
+    container_name: memcached-tyamahori
+
+  npm-tyamahori:
+    image: node
+    container_name: npm-tyamahori
+    volumes:
+      - ./:/app
+    working_dir: '/app'
+    tty: true
+    command: /bin/bash -c 'npm install && npm run build'
